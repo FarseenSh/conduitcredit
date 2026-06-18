@@ -39,5 +39,6 @@ public entry fun declare_default<T>(
     credit_pool::write_off(pool, bad_debt); // junior-first
     credit_line::mark_defaulted(line);
     registry::ban(bl, borrower);
+    registry::clear_line(bl, borrower); // free the (now-dead) line slot; borrower stays banned
     event::emit(DefaultEvent { borrower, bad_debt, ts: now });
 }

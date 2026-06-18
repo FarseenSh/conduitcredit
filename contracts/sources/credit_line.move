@@ -22,6 +22,8 @@ const E_NOT_BORROWER: u64 = 2;
 const E_OVER_LIMIT: u64 = 3;
 const E_WRONG_POOL: u64 = 4;
 const E_BLACKLISTED: u64 = 5;
+const E_ALREADY_HAS_LINE: u64 = 6;  // one active line per borrower (anti over-borrow)
+const E_OUTSTANDING_DEBT: u64 = 7;  // can't close a line that still owes
 
 public struct CreditLine has key {
     id: UID,
@@ -41,7 +43,7 @@ public struct CreditLine has key {
 public entry fun open_credit_line<T>(
     att: &IncomeAttestation,
     pool: &CreditPool<T>,
-    bl: &Blacklist,
+    bl: &mut Blacklist,
     clock: &Clock,
     ctx: &mut TxContext,
 ) {
@@ -50,6 +52,9 @@ public entry fun open_credit_line<T>(
     assert!(income::owner(att) == me, E_NOT_BORROWER);
     assert!(now < income::expiry(att), E_EXPIRED_ATTESTATION);
     assert!(!registry::is_banned(bl, me), E_BLACKLISTED);
+    // One income attestation → at most ONE open line. Without this a borrower could
+    // re-open the same (by-reference) attestation N times and over-borrow N×limit.
+    assert!(!registry::has_active_line(bl, me), E_ALREADY_HAS_LINE);
 
     let limit = (((income::income(att) as u128) * (LTV_BPS as u128)) / 10000) as u64;
     let line = CreditLine {
@@ -64,6 +69,7 @@ public entry fun open_credit_line<T>(
         opened_ts: now,
         last_accrual_ts: now,
     };
+    registry::register_line(bl, me, object::id(&line)); // claim the borrower's single slot
     transfer::transfer(line, me); // key-only, owner-scoped
 }
 
@@ -109,6 +115,19 @@ public entry fun repay<T>(
 
     if (payment.value() > 0) transfer::public_transfer(payment, ctx.sender())
     else payment.destroy_zero();
+}
+
+/// Voluntarily close a fully-repaid line, freeing the borrower's single-line slot so
+/// they can re-attest (e.g. after an income change) and open a fresh, resized line.
+public entry fun close_credit_line(line: CreditLine, bl: &mut Blacklist, ctx: &mut TxContext) {
+    assert!(line.borrower == ctx.sender(), E_NOT_BORROWER);
+    assert!(line.outstanding == 0 && line.accrued_interest == 0, E_OUTSTANDING_DEBT);
+    registry::clear_line(bl, line.borrower);
+    let CreditLine {
+        id, borrower: _, pool_id: _, credit_limit: _, outstanding: _, accrued_interest: _,
+        attestation_id: _, ir_bps: _, opened_ts: _, last_accrual_ts: _,
+    } = line;
+    object::delete(id);
 }
 
 // views

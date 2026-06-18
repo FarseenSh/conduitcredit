@@ -63,8 +63,8 @@ fun test_full_lifecycle() {
     {
         let att = ts::take_from_sender<IncomeAttestation>(&sc);
         let pool = ts::take_shared<CreditPool<USD>>(&sc);
-        let bl = ts::take_shared<Blacklist>(&sc);
-        credit_line::open_credit_line(&att, &pool, &bl, &clock, ts::ctx(&mut sc));
+        let mut bl = ts::take_shared<Blacklist>(&sc);
+        credit_line::open_credit_line(&att, &pool, &mut bl, &clock, ts::ctx(&mut sc));
         ts::return_shared(pool);
         ts::return_shared(bl);
         ts::return_to_sender(&sc, att);
@@ -167,8 +167,8 @@ fun test_default_writes_off_junior_first() {
     {
         let att = ts::take_from_sender<IncomeAttestation>(&sc);
         let pool = ts::take_shared<CreditPool<USD>>(&sc);
-        let bl = ts::take_shared<Blacklist>(&sc);
-        credit_line::open_credit_line(&att, &pool, &bl, &clock, ts::ctx(&mut sc));
+        let mut bl = ts::take_shared<Blacklist>(&sc);
+        credit_line::open_credit_line(&att, &pool, &mut bl, &clock, ts::ctx(&mut sc));
         ts::return_shared(pool);
         ts::return_shared(bl);
         ts::return_to_sender(&sc, att);
@@ -207,6 +207,48 @@ fun test_default_writes_off_junior_first() {
 }
 
 #[test]
+#[expected_failure(abort_code = credit_line::E_ALREADY_HAS_LINE)]
+/// One attestation must yield at most ONE line: a second open with the same
+/// (by-reference) attestation aborts, so the income-sized limit can't be multiplied.
+fun test_one_line_per_borrower() {
+    let mut sc = ts::begin(ADMIN);
+    registry::init_for_testing(ts::ctx(&mut sc));
+    credit_pool::create_pool<USD>(ts::ctx(&mut sc));
+    let mut clock = clock::create_for_testing(ts::ctx(&mut sc));
+    clock.set_for_testing(FETCH_TS);
+    let enclave = enclave_registry::new_operator_enclave_for_testing(PK, ts::ctx(&mut sc));
+
+    ts::next_tx(&mut sc, ADMIN);
+    income::attest_income(&enclave, BORROWER, INCOME, b"plaid", FETCH_TS, TS_SIG, GOOD_SIG, &clock, ts::ctx(&mut sc));
+
+    // First line opens fine and claims the borrower's single slot.
+    ts::next_tx(&mut sc, BORROWER);
+    {
+        let att = ts::take_from_sender<IncomeAttestation>(&sc);
+        let pool = ts::take_shared<CreditPool<USD>>(&sc);
+        let mut bl = ts::take_shared<Blacklist>(&sc);
+        credit_line::open_credit_line(&att, &pool, &mut bl, &clock, ts::ctx(&mut sc));
+        ts::return_shared(pool);
+        ts::return_shared(bl);
+        ts::return_to_sender(&sc, att);
+    };
+    // Second open with the SAME attestation → E_ALREADY_HAS_LINE (no over-borrow).
+    ts::next_tx(&mut sc, BORROWER);
+    {
+        let att = ts::take_from_sender<IncomeAttestation>(&sc);
+        let pool = ts::take_shared<CreditPool<USD>>(&sc);
+        let mut bl = ts::take_shared<Blacklist>(&sc);
+        credit_line::open_credit_line(&att, &pool, &mut bl, &clock, ts::ctx(&mut sc));
+        ts::return_shared(pool);
+        ts::return_shared(bl);
+        ts::return_to_sender(&sc, att);
+    };
+    enclave_registry::destroy_enclave_for_testing(enclave);
+    clock.destroy_for_testing();
+    ts::end(sc);
+}
+
+#[test]
 #[expected_failure(abort_code = credit_line::E_BLACKLISTED)]
 fun test_blacklist_blocks_open() {
     let mut sc = ts::begin(ADMIN);
@@ -232,8 +274,8 @@ fun test_blacklist_blocks_open() {
     {
         let att = ts::take_from_sender<IncomeAttestation>(&sc);
         let pool = ts::take_shared<CreditPool<USD>>(&sc);
-        let bl = ts::take_shared<Blacklist>(&sc);
-        credit_line::open_credit_line(&att, &pool, &bl, &clock, ts::ctx(&mut sc));
+        let mut bl = ts::take_shared<Blacklist>(&sc);
+        credit_line::open_credit_line(&att, &pool, &mut bl, &clock, ts::ctx(&mut sc));
         ts::return_shared(pool);
         ts::return_shared(bl);
         ts::return_to_sender(&sc, att);

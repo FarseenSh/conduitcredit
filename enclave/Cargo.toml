@@ -1,0 +1,27 @@
+[package]
+name = "nautilus-server"
+version = "0.1.0"
+edition = "2021"
+description = "ConduitCredit Nautilus enclave — income attestation signer (production)"
+
+[lib]
+name = "nautilus_server"
+path = "src/lib.rs"
+
+[[bin]]
+name = "nautilus-server"
+path = "src/main.rs"
+required-features = ["server"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+bcs = "0.1.6"
+ed25519-dalek = "2"
+hex = "0.4"
+# server-only (feature-gated so `cargo test` stays fast and proves BCS parity quickly)
+axum = { version = "0.7", optional = true }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net"], optional = true }
+serde_json = { version = "1", optional = true }
+
+[features]
+server = ["dep:axum", "dep:tokio", "dep:serde_json"]

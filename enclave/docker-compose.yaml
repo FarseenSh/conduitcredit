@@ -1,0 +1,16 @@
+# Marlin Oyster CVM spec. The contents of THIS file derive PCR16 (on top of the Nitro
+# PCR0/1/2 from the image), which the shared Oyster registry pins on chain. Freeze it Day 1.
+#
+# Deploy:  oyster-cvm deploy --docker-compose docker-compose.yaml ...
+# Then register on chain via enclave_registry::register_via_nitro against the Oyster registry:
+#   testnet REGISTRY_PACKAGE_ID 0x05cd5a306375c49727fc2f1e667df8bcc1f5b52ad07e850074d330afda932761
+#           REGISTRY_ID         0x7ebc3f9bc7a0cf0820d241ad767036483b885bbd62636fb9446bb0d99d2ed091
+#   mainnet PACKAGE             0x8df76b79118ffad2bacb55705c84474802ddb3d62199b98db720c5088e161ab8
+services:
+  nautilus-server:
+    image: conduitcredit/nautilus-server:latest
+    init: true
+    network_mode: host
+    restart: unless-stopped
+    # Plaid keys are pulled from AWS Secrets Manager at runtime inside the enclave,
+    # NOT provided here (they must never enter the image or PCRs).

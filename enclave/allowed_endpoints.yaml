@@ -1,0 +1,9 @@
+# FROZEN at build time. The enclave can ONLY reach these hosts; any change churns the
+# PCRs (PCR16 under Marlin Oyster) → forces on-chain re-registration. Lock on Day 1.
+# Plaid client_id/secret are fetched from AWS Secrets Manager at runtime INSIDE the enclave
+# — never baked into the image (they would land in the PCR measurements).
+endpoints:
+  - "production.plaid.com/identity/get"
+  - "production.plaid.com/income/verification/paystubs"
+  - "sandbox.plaid.com/identity/get"
+  - "sandbox.plaid.com/income/verification/paystubs"

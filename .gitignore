@@ -16,5 +16,8 @@ app/.next/
 *.pem
 *.key
 
+# Rust
+target/
+
 # OS
 .DS_Store

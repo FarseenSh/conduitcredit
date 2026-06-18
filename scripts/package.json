@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@mysten/bcs": "^1.2.0",
+    "@mysten/sui": "^1.45.2",
     "@noble/ed25519": "^2.1.0"
   }
 }

@@ -1,0 +1,14 @@
+{
+  "name": "conduit-credit-scripts",
+  "private": true,
+  "type": "module",
+  "version": "0.0.0",
+  "description": "Offline Ed25519 + BCS signer that produces the gate test fixture",
+  "scripts": {
+    "sign": "node sign.mjs"
+  },
+  "dependencies": {
+    "@mysten/bcs": "^1.2.0",
+    "@noble/ed25519": "^2.1.0"
+  }
+}

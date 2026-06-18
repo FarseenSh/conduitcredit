@@ -1,0 +1,13 @@
+[package]
+name = "conduit_credit"
+edition = "2024.beta"
+license = "Apache-2.0"
+
+# System dependencies (Sui framework, MoveStdlib) are resolved implicitly from the
+# installed CLI's bundled framework — this keeps the published package's framework
+# linkage matched to the CLI and avoids a slow git clone of the full sui repo.
+# The nautilus `enclave` git dependency is added post-gate (real verify_signature path):
+#   Enclave = { git = "https://github.com/MystenLabs/nautilus.git", subdir = "move/enclave", rev = "<pinned>" }
+
+[addresses]
+conduit_credit = "0x0"

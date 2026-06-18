@@ -1,0 +1,20 @@
+# Isolated, project-local Sui CLI config — holds sui.keystore (PRIVATE KEYS). NEVER commit.
+.sui/
+
+# Move build artifacts
+contracts/build/
+
+# Node
+node_modules/
+scripts/node_modules/
+app/node_modules/
+app/.next/
+
+# Secrets / env / raw income data — only TEE-signed attestations ever touch the chain
+.env
+.env.*
+*.pem
+*.key
+
+# OS
+.DS_Store

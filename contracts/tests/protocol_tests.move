@@ -249,6 +249,28 @@ fun test_one_line_per_borrower() {
 }
 
 #[test]
+#[expected_failure(abort_code = credit_pool::E_TRANCHE_WIPED)]
+/// After a junior tranche is fully written off, a new junior deposit must abort (no
+/// fair share price) rather than silently dilute the newcomer into the dead shares.
+fun test_deposit_into_wiped_tranche_aborts() {
+    let mut sc = ts::begin(ADMIN);
+    credit_pool::create_pool<USD>(ts::ctx(&mut sc));
+    ts::next_tx(&mut sc, BOB);
+    {
+        let mut pool = ts::take_shared<CreditPool<USD>>(&sc);
+        // Junior funds 500; it is lent out, then the whole 500 defaults → junior wiped.
+        credit_pool::deposit_junior(&mut pool, coin::mint_for_testing<USD>(500_000000, ts::ctx(&mut sc)), ts::ctx(&mut sc));
+        let borrowed = credit_pool::take_for_borrow(&mut pool, 500_000000, ts::ctx(&mut sc));
+        coin::burn_for_testing(borrowed);
+        credit_pool::write_off(&mut pool, 500_000000); // junior_assets → 0, junior_shares = 500
+        // New junior deposit into the wiped tranche → E_TRANCHE_WIPED.
+        credit_pool::deposit_junior(&mut pool, coin::mint_for_testing<USD>(100_000000, ts::ctx(&mut sc)), ts::ctx(&mut sc));
+        ts::return_shared(pool);
+    };
+    ts::end(sc);
+}
+
+#[test]
 #[expected_failure(abort_code = credit_line::E_BLACKLISTED)]
 fun test_blacklist_blocks_open() {
     let mut sc = ts::begin(ADMIN);

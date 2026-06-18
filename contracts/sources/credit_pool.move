@@ -43,6 +43,7 @@ const JUNIOR_YIELD_WEIGHT: u64 = 3;
 const E_ZERO: u64 = 1;
 const E_INSUFFICIENT_LIQUIDITY: u64 = 2;
 const E_WRONG_POOL: u64 = 3;
+const E_TRANCHE_WIPED: u64 = 4; // no fair share price for a fully-wiped tranche
 
 public entry fun create_pool<T>(ctx: &mut TxContext) {
     transfer::share_object(CreditPool<T> {
@@ -147,8 +148,14 @@ fun distribute_interest<T>(pool: &mut CreditPool<T>, interest: u64) {
 }
 
 fun mint_shares(assets: u64, shares: u64, amount: u64): u64 {
-    if (shares == 0 || assets == 0) amount
-    else (((amount as u128) * (shares as u128)) / (assets as u128)) as u64
+    if (shares == 0) amount // bootstrap: first deposit sets 1 share == 1 asset
+    else {
+        // A fully-wiped tranche (assets == 0 yet shares still outstanding, after a
+        // junior wipeout) has no fair price — refuse the deposit rather than diluting
+        // the newcomer into the dead shares.
+        assert!(assets > 0, E_TRANCHE_WIPED);
+        (((amount as u128) * (shares as u128)) / (assets as u128)) as u64
+    }
 }
 
 fun redeem_amount(assets: u64, shares_total: u64, shares: u64): u64 {

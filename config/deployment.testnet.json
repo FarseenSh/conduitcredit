@@ -1,0 +1,17 @@
+{
+  "network": "testnet",
+  "rpc": "https://fullnode.testnet.sui.io:443",
+  "packageId": "0x771c790bfee4ada67f37bd375b7ab4f3c877fd46d78488b372a7d66b93a482ee",
+  "publishDigest": "HzWeNZSF1zybbjHPpjzcrDwb69uHvdsPF3mr1aqQak9o",
+  "adminCap": "0x78995775a938438a32856ca44d438656eef7981d0cd778236ba4fcc275c968ff",
+  "keeperCap": "0x07819235e2970dab780a2dc3d39ff46022ac39362a0b239a36e431f9bd4eb5a9",
+  "upgradeCap": "0x6f7f883d3576f9e86255e619ca014ddc177de78418f8bb90ad1d3446886ce22b",
+  "blacklist": "0x900506ce90879fd43488fa71ec6d32a6f281d67c1b937e04fa5d6338b7434422",
+  "treasuryCap": "0x5fa2741d953014dc2ae82931e0b631f7b38abc665d27338cd611d8ba3ca49375",
+  "coinMetadata": "0xc34a9dd15c48f384ed7265cf56feaa270437e5d17cb55bf20e1d8f560547286d",
+  "usdcType": "0x771c790bfee4ada67f37bd375b7ab4f3c877fd46d78488b372a7d66b93a482ee::mock_usdc::MOCK_USDC",
+  "enclaveSignerPk": "755c4cb9256ca7cdc4acfdc6cfeeda849017e5b9f9514e99191bd67e0b0d4276",
+  "deployer": "0xfae8332571a32b75913eee73c83000c45b1fbfe79fd3f6f84197bf35271b75c2",
+  "enclave": "0xa6b3a7dc9df2dba145218e9cd00e8ea8c7bd714e2889c79de1196a3a08d24695",
+  "pool": "0xb0e01adfe7acb231ba43388464869c653ea53fb7ac09a3d05c432d3f437a19ec"
+}

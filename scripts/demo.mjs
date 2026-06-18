@@ -119,6 +119,17 @@ let lineId;
   await run(tx, 'repay 1,010 dUSDC → principal back, interest to LPs');
 }
 
+// 6b) Close the fully-repaid line — frees the borrower's single-line slot so this whole
+// script is re-runnable (and shows off close_credit_line). No type arg / no pool needed.
+{
+  const tx = new Transaction();
+  tx.moveCall({
+    target: `${PKG}::credit_line::close_credit_line`,
+    arguments: [tx.object(lineId), tx.object(BL)],
+  });
+  await run(tx, 'close_credit_line → one-line slot freed (re-runnable)');
+}
+
 // 7) The moat in action: a TAMPERED signature is rejected on chain.
 {
   const tx = new Transaction();

@@ -29,13 +29,14 @@ The full underwriting loop runs on Sui testnet today. `scripts/demo.mjs` execute
 
 | Step | What happens | Testnet digest |
 |---|---|---|
-| Senior LP deposit | 5,000 dUSDC → protected tranche | `3LQihMcyVn2inPcPCZXtaFTJzr3HrUfRwpCeKZo9iKcw` |
-| Junior LP deposit | 2,000 dUSDC → first-loss tranche | `4KBnBK6XqRDYL3ZczphkdppgtrJBBEjicHzLCmHhHUDh` |
-| **attest_income** | enclave-signed income → **on-chain `verify_signature` ✓** → `IncomeAttestation` minted | `545A1Fkhx8V2cZL28mcRCcLxdEuvdrW7B3Fh2HqKCaPs` |
-| open_credit_line | limit = $4,200 × 30% = **$1,260** | `4CUxfHg4qeP8iEgFv3bDU2dWCbeYC29RqGxWycAmzcrU` |
-| borrow | 1,000 dUSDC lands in the wallet | `6T75ygy1J1P3G7HgwcBMJCTe1sNYtJze2hfSRnSpNyVM` |
-| repay | principal back, interest to LPs | `7Cj98yzVomuKGsyPuSdeejAD9octTBNQYJg7tnbKv78a` |
-| **forged attestation** | tampered signature → **chain ABORTS** (`income::attest_income` `E_BAD_SIGNATURE`) | `HZEeVqB8t31t6Es9VPEUVmP1iTgxXyhfMKrt5yMUDNRW` |
+| Senior LP deposit | 5,000 dUSDC → protected tranche | `3vrzcCG1BYHTnbLa8ibanEwxETJSV4FPqfuV5FY6cf81` |
+| Junior LP deposit | 2,000 dUSDC → first-loss tranche | `6PPoW2XcNDLBX2eXidd4sycJdPGBnZe1SV2ZBbpGdRXq` |
+| **attest_income** | enclave-signed income → **on-chain `verify_signature` ✓** → `IncomeAttestation` minted | `CvXW2uy66kYbHhkE7sASexxQzwGFA9F2Uu8sMAKaU4PP` |
+| open_credit_line | limit = $4,200 × 30% = **$1,260** | `CD7i3gUvk5Q7qBsCaGUVpHnZZsZsr1CVf8WQNDEy2ZbH` |
+| borrow | 1,000 dUSDC lands in the wallet | `8cj45nyXiWGkGCx2GZtwDpVBpq6Pg6VMJXe2RDBmfwGN` |
+| repay | principal back, interest to LPs | `5iL8NHhtuyLQfZkQcm2gGSsMr9eqrmWBifNEtZhpLNWi` |
+| close_credit_line | line repaid in full → one-line slot freed | `7XWRcJfth4sKK3S7obLbCnUG51XJdYEyyUTRx3U5CQv` |
+| **forged attestation** | tampered signature → **chain ABORTS** (`income::attest_income` `E_BAD_SIGNATURE`) | `CcK81YQR1cixmERph1XggwmVhqefjMoAnmEcm7QtHwgE` |
 
 The TEE-verified-income loop is **live, not mocked.**
 
@@ -45,11 +46,12 @@ The TEE-verified-income loop is **live, not mocked.**
 
 | Object | ID |
 |---|---|
-| **Package** | `0x771c790bfee4ada67f37bd375b7ab4f3c877fd46d78488b372a7d66b93a482ee` |
-| **Enclave** (registered Ed25519 key) | `0xa6b3a7dc9df2dba145218e9cd00e8ea8c7bd714e2889c79de1196a3a08d24695` |
-| **CreditPool\<dUSDC\>** (shared) | `0xb0e01adfe7acb231ba43388464869c653ea53fb7ac09a3d05c432d3f437a19ec` |
-| **Blacklist** (shared) | `0x900506ce90879fd43488fa71ec6d32a6f281d67c1b937e04fa5d6338b7434422` |
-| dUSDC type | `0x771c790b…::mock_usdc::MOCK_USDC` |
+| **Package** | `0xe480a59eb9aa0739330078e8e79559139798c0b190061212b07cbe290378ae43` |
+| **Enclave** (registered Ed25519 key) | `0xf6895dda4ade0687cbc069853d2822fed0ce4fc12fed5eafc681929b267f6353` |
+| **CreditPool\<dUSDC\>** (shared) | `0x96d95a433d39679c64586dd454e40efe6b04a71d06bdd50f6cd460d0ac674ff1` |
+| **Blacklist** (shared) | `0x4aba6691032ea0c05d7bb567f6e9cc07e2f47f88384a9f734ac07fdf2da98851` |
+| dUSDC type | `0xe480a59e…::mock_usdc::MOCK_USDC` |
+| Publish tx | `4RPp1vHUtmjRcoN5V2fi2zZHaESRJi8aRZxBkNxtUzW5` |
 | AdminCap / KeeperCap / TreasuryCap | see `config/deployment.testnet.json` |
 
 Day-1 gate canary (the standalone `verify_signature` proof) also remains published at `0xdb062506575fb08f0596eb28ad4a444693838e362147099ba784d93535b28692`.
@@ -73,10 +75,12 @@ Day-1 gate canary (the standalone `verify_signature` proof) also remains publish
                        framework) → shared Enclave{pk,pcrs}; verify per request
    income            — attest_income: verify_signature ✓ → non-transferable
                        IncomeAttestation (30-day TTL)
-   credit_line       — open (limit = income×LTV) / borrow / repay (+interest)
+   credit_line       — open (limit = income×LTV) / borrow / repay / close;
+                       ONE active line per borrower (anti over-borrow)
    credit_pool       — standalone pool; share-price junior/senior tranches;
-                       junior-first loss; idle-yield ready
+                       junior-first loss; wiped-tranche guard; idle-yield ready
    defaults          — keeper write-off (junior-first) + blacklist
+   registry          — shared borrower book: blacklist + one-line-per-borrower
 ```
 
 **Two-phase trust:** the expensive step (verify a Nitro attestation's cert chain + PCRs against the AWS root CA in the framework) happens **once** at `register_enclave`; every per-borrower `attest_income` is a **cheap Ed25519 `verify_signature`** against the stored pubkey.
@@ -90,7 +94,7 @@ Day-1 gate canary (the standalone `verify_signature` proof) also remains publish
 ## Repository layout
 
 ```
-contracts/   Move package `conduit_credit` (6 modules) + tests (10 passing)
+contracts/   Move package `conduit_credit` (7 modules) + tests (12 passing)
   sources/   enclave_registry · income · credit_pool · credit_line · defaults · mock_usdc · registry
   tests/     gate_tests (BCS/ed25519 canary) · protocol_tests (full lifecycle)
 enclave/     Rust nautilus-server (production Nitro signer) + paired BCS serde test
@@ -103,7 +107,7 @@ config/      deployment.testnet.json — single source of truth for all IDs
 
 ```bash
 # Move contracts
-sui move test  --path contracts            # 10/10 pass (gate + full lifecycle)
+sui move test  --path contracts            # 12/12 pass (gate + full lifecycle)
 sui move build --path contracts
 
 # End-to-end loop on testnet (uses config/deployment.testnet.json)

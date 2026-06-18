@@ -1,2 +1,11 @@
+# Single-package "workspace" file — pnpm 11 reads project settings here.
+# Allow sharp's native build (Next.js image optimizer pulls it in).
 allowBuilds:
-  sharp: set this to true or false
+  sharp: true
+
+# Dedupe @mysten/sui to one version. @mysten/dapp-kit pins 1.36.1 internally while
+# the app depends on ^1.45.2; without this, useSuiClient() (1.36.1's SuiClient) and
+# protocol.ts readers (typed against 1.45.2's SuiClient) are nominally incompatible
+# via a private field, which fails `next build` type-checking. Force the app's version.
+overrides:
+  "@mysten/sui": 1.45.2

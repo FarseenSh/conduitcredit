@@ -29,14 +29,14 @@ The full underwriting loop runs on Sui testnet today. `scripts/demo.mjs` execute
 
 | Step | What happens | Testnet digest |
 |---|---|---|
-| Senior LP deposit | 5,000 dUSDC → protected tranche | `3vrzcCG1BYHTnbLa8ibanEwxETJSV4FPqfuV5FY6cf81` |
-| Junior LP deposit | 2,000 dUSDC → first-loss tranche | `6PPoW2XcNDLBX2eXidd4sycJdPGBnZe1SV2ZBbpGdRXq` |
-| **attest_income** | enclave-signed income → **on-chain `verify_signature` ✓** → `IncomeAttestation` minted | `CvXW2uy66kYbHhkE7sASexxQzwGFA9F2Uu8sMAKaU4PP` |
-| open_credit_line | limit = $4,200 × 30% = **$1,260** | `CD7i3gUvk5Q7qBsCaGUVpHnZZsZsr1CVf8WQNDEy2ZbH` |
-| borrow | 1,000 dUSDC lands in the wallet | `8cj45nyXiWGkGCx2GZtwDpVBpq6Pg6VMJXe2RDBmfwGN` |
-| repay | principal back, interest to LPs | `5iL8NHhtuyLQfZkQcm2gGSsMr9eqrmWBifNEtZhpLNWi` |
-| close_credit_line | line repaid in full → one-line slot freed | `7XWRcJfth4sKK3S7obLbCnUG51XJdYEyyUTRx3U5CQv` |
-| **forged attestation** | tampered signature → **chain ABORTS** (`income::attest_income` `E_BAD_SIGNATURE`) | `CcK81YQR1cixmERph1XggwmVhqefjMoAnmEcm7QtHwgE` |
+| Senior LP deposit | 5,000 dUSDC → protected tranche | `CXyixgqSXV9KnxVfw66udXAk8EdJHrmhsFsDJPC7jjxV` |
+| Junior LP deposit | 2,000 dUSDC → first-loss tranche | `EQfpJXrqG39zsqZxwH7fSQw8MoGPLHZgQqiYtwR2qcsm` |
+| **attest_income** | enclave-signed income → **on-chain `verify_signature` ✓** → `IncomeAttestation` minted | `CJr8Ad8t1HdaTF2jPPJ1mKY5WE3d6Eu8d7HMFwWZWo4D` |
+| open_credit_line | limit = $4,200 × 30% = **$1,260** | `EdfnLj7djrYnd5QnRsWGWzgEyyd6s5enJiyQhmPiG1Ma` |
+| borrow | 1,000 dUSDC lands in the wallet | `DH6pbHZsjSdJLGhjj4CxhNPgkFCNdJf4svaM43ptWckr` |
+| repay | principal back, interest to LPs | `5MsMA3LjLFkQkEwsjpC2wKtqckcbSBqZsGv7AA9jnHKr` |
+| close_credit_line | line repaid in full → one-line slot freed | `Ginc2K8spYw4HcaLDQZQraWAv1faen2D6w3BqUMCi23q` |
+| **forged attestation** | tampered signature → **chain ABORTS** (`income::attest_income` `E_BAD_SIGNATURE`) | `FNoV6aosjkurRnC4oxsq74hzL1zQpSuHaaFafHsx8cUw` |
 
 The TEE-verified-income loop is **live, not mocked.**
 
@@ -46,12 +46,13 @@ The TEE-verified-income loop is **live, not mocked.**
 
 | Object | ID |
 |---|---|
-| **Package** | `0xe480a59eb9aa0739330078e8e79559139798c0b190061212b07cbe290378ae43` |
-| **Enclave** (registered Ed25519 key) | `0xf6895dda4ade0687cbc069853d2822fed0ce4fc12fed5eafc681929b267f6353` |
-| **CreditPool\<dUSDC\>** (shared) | `0x96d95a433d39679c64586dd454e40efe6b04a71d06bdd50f6cd460d0ac674ff1` |
-| **Blacklist** (shared) | `0x4aba6691032ea0c05d7bb567f6e9cc07e2f47f88384a9f734ac07fdf2da98851` |
-| dUSDC type | `0xe480a59e…::mock_usdc::MOCK_USDC` |
-| Publish tx | `4RPp1vHUtmjRcoN5V2fi2zZHaESRJi8aRZxBkNxtUzW5` |
+| **Package** | `0x7888afef9c138ba74649bae2d68f98b7a854f4ac6a2c0975f5d0a1ce39f2406d` |
+| **Enclave** (registered Ed25519 key) | `0x7670a951bec571857ab204ede863b0ae527cf103fea97139c28d7d867857362e` |
+| **CreditPool\<dUSDC\>** (shared) | `0xca88fdb21fe1ae77c21009305399bd2a4f7f064d4ff05d9a95074ffc02fdb4aa` |
+| **Blacklist** (shared) | `0xfb471409478c7f953d64da510a6b2068f489dcf72d35f8dedc650bf7dc948fe1` |
+| **EnclaveConfig** (pinned PCR measurements) | `0xba9fbcf203a9ca74e29655f92e672d0a0f6a4f07116296158d7916de4afedb08` |
+| dUSDC type | `0x7888afef…::mock_usdc::MOCK_USDC` |
+| Publish tx | `FZFGCLE6V3zpZG4KXXwsZvk7iWadJjMBGTfzePShisFH` |
 | AdminCap / KeeperCap / TreasuryCap | see `config/deployment.testnet.json` |
 
 Day-1 gate canary (the standalone `verify_signature` proof) also remains published at `0xdb062506575fb08f0596eb28ad4a444693838e362147099ba784d93535b28692`.
@@ -94,7 +95,7 @@ Day-1 gate canary (the standalone `verify_signature` proof) also remains publish
 ## Repository layout
 
 ```
-contracts/   Move package `conduit_credit` (7 modules) + tests (12 passing)
+contracts/   Move package `conduit_credit` (7 modules) + tests (14 passing)
   sources/   enclave_registry · income · credit_pool · credit_line · defaults · mock_usdc · registry
   tests/     gate_tests (BCS/ed25519 canary) · protocol_tests (full lifecycle)
 enclave/     Rust nautilus-server (production Nitro signer) + paired BCS serde test
@@ -107,7 +108,7 @@ config/      deployment.testnet.json — single source of truth for all IDs
 
 ```bash
 # Move contracts
-sui move test  --path contracts            # 12/12 pass (gate + full lifecycle)
+sui move test  --path contracts            # 14/14 pass (gate + lifecycle + real Nitro attestation)
 sui move build --path contracts
 
 # End-to-end loop on testnet (uses config/deployment.testnet.json)
@@ -134,7 +135,7 @@ cd app && pnpm install && pnpm dev          # http://localhost:3000
 Every Move module, the `verify_signature` gate, and the BCS contract are **mainnet-ready as-is**. The pool is generic over the coin type, so mainnet uses native USDC unchanged. Only two switches are needed, neither of which touches the contracts:
 
 1. **Plaid Sandbox → Production** — swap the API host + production keys (both already whitelisted in the enclave's `allowed_endpoints.yaml`, so no PCR churn).
-2. **Operator-fallback → real Nitro via Marlin Oyster** — deploy the `enclave/` image with `oyster-cvm`, then call `enclave_registry::register_via_nitro` (already implemented, using the native `sui::nitro_attestation`) against Oyster's mainnet registry.
+2. **Operator-fallback → real Nitro via Marlin Oyster** — deploy the `enclave/` image with `oyster-cvm`, pin its PCR0/1/2 via `set_expected_pcrs`, then call `enclave_registry::register_via_nitro` (already implemented and tested against a real attestation, using the native `sui::nitro_attestation`). PCR pinning makes registration permissionless yet trustless — only the canonical image's key is accepted.
 
 **Resilience without diluting the story:** the income-proof *source* can swap from TEE-signed to a trusted-oracle-operator-signed attestation using the **identical `verify_signature` pattern** — every contract, tranche, and the demo stay the same (`register_via_operator` is exactly this path).
 
@@ -143,6 +144,7 @@ Every Move module, the `verify_signature` gate, and the BCS contract are **mainn
 - **Raw bank/payroll statements never touch the chain** — only the enclave-signed 6-month average does.
 - **No keys, `.env`, or raw income data are committed.** The Sui keystore lives in gitignored `./.sui`; production Plaid/enclave keys live in AWS Secrets Manager, fetched at runtime inside the enclave (never baked into the image / PCRs).
 - BCS layout is pinned byte-for-byte across Rust (enclave), Move (chain), and the JS signer by paired serde tests — the canonical nautilus weather vector `0020b1d1…` verifies identically on all sides.
+- **The production Nitro path is verified, not just written.** `contracts/tests/nitro_tests.move` drives `register_via_nitro` against a *real* AWS-signed Nitro attestation: the native `sui::nitro_attestation` validates the COSE signature + X.509 chain to the AWS root CA in the framework, and the registry asserts the attested **PCR measurements equal the pinned canonical image** (the `EnclaveConfig` object) — so only *our* enclave's key can register, never an attacker's own Nitro enclave. A wrong-PCR attestation is rejected (negative test).
 
 ## License
 

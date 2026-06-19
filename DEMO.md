@@ -16,6 +16,6 @@
 **Demo-day failover (legitimate):** pre-signed attestations verify identically whether the enclave call was live or cached, so a Plaid/RPC hiccup never breaks the live-verify moment.
 
 ## The 30-second "why it's hard to fake" for judges
-- **Real Sui-native work, live:** `attest_income` calls the real `verify_signature` (Ed25519 over a BCS `IntentMessage`) against a registered `Enclave`; a forged signature aborts on chain (testnet digest `CcK81YQR…`).
+- **Real Sui-native work, live:** `attest_income` calls the real `verify_signature` (Ed25519 over a BCS `IntentMessage`) against a registered `Enclave`; a forged signature aborts on chain (testnet digest `FNoV6aos…`).
 - **BCS discipline proven across 3 languages:** the canonical nautilus weather vector and the `CreditPayload` serialize byte-identically in Move, Rust (enclave), and JS — and Rust + JS produce the *same* Ed25519 signature (paired serde tests, all green).
 - **Production-ready:** `register_via_nitro` already uses the native `sui::nitro_attestation`; the pool is generic over the coin type, so mainnet swaps to native USDC unchanged.

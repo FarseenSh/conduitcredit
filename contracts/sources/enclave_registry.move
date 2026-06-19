@@ -32,6 +32,19 @@ const MODE_OPERATOR: u8 = 1;
 /// Gates operator registration + PCR updates. Minted to the deployer at publish.
 public struct AdminCap has key, store { id: UID }
 
+/// Pins the expected PCR0/1/2 measurements of the canonical ConduitCredit enclave image.
+/// The admin sets these ONCE from the built EIF; `register_via_nitro` then lets ANYONE
+/// register the enclave permissionlessly, but ONLY if the on-chain-verified attestation
+/// proves it booted that exact image — so a "good signature" means "signed by OUR enclave",
+/// not "by some enclave". Mirrors nautilus `EnclaveConfig` / Marlin Oyster PCR pinning.
+public struct EnclaveConfig has key {
+    id: UID,
+    expected_pcr0: vector<u8>,
+    expected_pcr1: vector<u8>,
+    expected_pcr2: vector<u8>,
+    configured: bool,
+}
+
 /// A registered enclave: the Ed25519 pubkey `verify_signature` checks against, plus
 /// the PCR measurements (non-zero = production). `mode` records how the key was bound:
 /// 0 = real Nitro attestation, 1 = operator fallback.
@@ -63,9 +76,16 @@ const E_PK_LEN: u64 = 1;
 const E_SIG_LEN: u64 = 2;
 const E_BAD_SIGNATURE: u64 = 3;
 const E_NO_ENCLAVE_KEY: u64 = 4;
+const E_BAD_PCR: u64 = 5;     // attested measurements != the pinned canonical image
+const E_PCR_UNSET: u64 = 6;   // admin hasn't pinned the expected measurements yet
 
 fun init(ctx: &mut TxContext) {
     transfer::public_transfer(AdminCap { id: object::new(ctx) }, ctx.sender());
+    transfer::share_object(EnclaveConfig {
+        id: object::new(ctx),
+        expected_pcr0: vector[], expected_pcr1: vector[], expected_pcr2: vector[],
+        configured: false,
+    });
 }
 
 public fun intent_scope(): u8 { INTENT_SCOPE_CREDIT }
@@ -75,16 +95,45 @@ public fun pcr0(e: &Enclave): vector<u8> { e.pcr0 }
 
 // ─────────────────────────────── registration ───────────────────────────────
 
+/// Admin pins the canonical enclave image's measurements (freeze once the EIF is built).
+/// PCR0/1/2 are the SHA-384 hashes the Nitro hypervisor records of the enclave image,
+/// kernel, and application — changing the image (or `allowed_endpoints.yaml`) changes them.
+public entry fun set_expected_pcrs(
+    _: &AdminCap,
+    cfg: &mut EnclaveConfig,
+    pcr0: vector<u8>,
+    pcr1: vector<u8>,
+    pcr2: vector<u8>,
+) {
+    cfg.expected_pcr0 = pcr0;
+    cfg.expected_pcr1 = pcr1;
+    cfg.expected_pcr2 = pcr2;
+    cfg.configured = true;
+}
+
 /// PRODUCTION (the moat): verify a real AWS Nitro attestation on chain — the native
-/// `sui::nitro_attestation` module checks the cert chain against the AWS root CA that
-/// ships in the Sui framework — then bind the enclave's pubkey + PCRs. No oracle, no
-/// trusted bridge. PTB: `doc = nitro_attestation::load_nitro_attestation(bytes, clock)`
-/// then `register_via_nitro(doc, ctx)`.
-public fun register_via_nitro(doc: NitroAttestationDocument, ctx: &mut TxContext) {
+/// `sui::nitro_attestation` module checks the COSE signature + cert chain against the AWS
+/// root CA that ships in the Sui framework — AND pin identity by asserting the attested
+/// PCRs equal the admin-configured canonical measurements. Permissionless yet trustless:
+/// anyone may register, but only an attestation from OUR exact enclave image is accepted.
+/// Without the PCR check, an attacker could register their own (real) Nitro enclave running
+/// different code that signs fabricated income. No oracle, no trusted bridge. PTB:
+/// `doc = nitro_attestation::load_nitro_attestation(bytes, clock)` then
+/// `register_via_nitro(config, doc, ctx)`.
+public fun register_via_nitro(
+    cfg: &EnclaveConfig,
+    doc: NitroAttestationDocument,
+    ctx: &mut TxContext,
+) {
+    assert!(cfg.configured, E_PCR_UNSET);
     let pk_opt = nitro_attestation::public_key(&doc);
     assert!(pk_opt.is_some(), E_NO_ENCLAVE_KEY);
     let pk = *pk_opt.borrow();
     let (p0, p1, p2) = extract_pcrs(&doc);
+    // Identity binding: the attested image MUST be the pinned canonical ConduitCredit image.
+    assert!(p0 == cfg.expected_pcr0, E_BAD_PCR);
+    assert!(p1 == cfg.expected_pcr1, E_BAD_PCR);
+    assert!(p2 == cfg.expected_pcr2, E_BAD_PCR);
     transfer::share_object(Enclave {
         id: object::new(ctx), pk, pcr0: p0, pcr1: p1, pcr2: p2, mode: MODE_NITRO,
     });
@@ -192,5 +241,21 @@ public fun new_operator_enclave_for_testing(pk: vector<u8>, ctx: &mut TxContext)
 #[test_only]
 public fun destroy_enclave_for_testing(e: Enclave) {
     let Enclave { id, pk: _, pcr0: _, pcr1: _, pcr2: _, mode: _ } = e;
+    id.delete();
+}
+
+#[test_only]
+public fun config_for_testing(
+    pcr0: vector<u8>, pcr1: vector<u8>, pcr2: vector<u8>, ctx: &mut TxContext,
+): EnclaveConfig {
+    EnclaveConfig {
+        id: object::new(ctx),
+        expected_pcr0: pcr0, expected_pcr1: pcr1, expected_pcr2: pcr2, configured: true,
+    }
+}
+
+#[test_only]
+public fun destroy_config_for_testing(c: EnclaveConfig) {
+    let EnclaveConfig { id, expected_pcr0: _, expected_pcr1: _, expected_pcr2: _, configured: _ } = c;
     id.delete();
 }

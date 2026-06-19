@@ -40,6 +40,7 @@ const found = {
   keeperCap: created('::registry::KeeperCap'),
   upgradeCap: created('::package::UpgradeCap'),
   blacklist: created('::registry::Blacklist'),
+  enclaveConfig: created('::enclave_registry::EnclaveConfig'),
   treasuryCap: created('::coin::TreasuryCap'),
   coinMetadata: created('::coin::CoinMetadata'),
 };

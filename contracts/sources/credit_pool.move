@@ -138,7 +138,12 @@ fun distribute_interest<T>(pool: &mut CreditPool<T>, interest: u64) {
     let sw = pool.senior_assets;
     let tw = jw + sw;
     if (tw == 0) {
-        // No LP principal to credit (only possible with no LPs); keep cash, exit.
+        // Both tranches carry zero assets. Park interest in the senior (protected) tranche
+        // so the pool invariant (liquidity + borrowed == senior + junior) is preserved and
+        // the next senior depositor realizes it. In practice unreachable — `borrow` keeps
+        // total_borrowed ≤ assets, so a full two-tranche wipeout leaves no loan to repay
+        // interest on — but this keeps the accounting structurally sound regardless.
+        pool.senior_assets = pool.senior_assets + interest;
         return
     };
     let jcut = (((interest as u128) * (jw as u128)) / (tw as u128)) as u64;

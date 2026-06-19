@@ -11,6 +11,7 @@ use sui::clock::Clock;
 
 const ATTESTATION_TTL_MS: u64 = 30 * 24 * 60 * 60 * 1000; // 30-day re-underwrite TTL
 const MAX_FETCH_AGE_MS: u64 = 10 * 60 * 1000;             // payload must be fresh (<10m)
+const CLOCK_SKEW_MS: u64 = 60 * 1000;                     // tolerate ≤1m of clock skew
 
 const E_BAD_SIGNATURE: u64 = 1;
 const E_STALE: u64 = 2;
@@ -47,7 +48,10 @@ public entry fun attest_income(
     ctx: &mut TxContext,
 ) {
     let now = clock.timestamp_ms();
+    // Two-sided freshness: not older than the window, and not future-dated (a future
+    // fetch_ts would otherwise pass the upper bound trivially).
     assert!(now <= fetch_ts_ms + MAX_FETCH_AGE_MS, E_STALE);
+    assert!(fetch_ts_ms <= now + CLOCK_SKEW_MS, E_STALE);
 
     let ok = enclave_registry::verify_credit(
         enclave, timestamp_ms, borrower, income_6mo_avg_usdc, data_source, fetch_ts_ms, &signature,

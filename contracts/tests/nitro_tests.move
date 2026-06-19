@@ -17,6 +17,8 @@ use conduit_credit::enclave_registry::{Self, Enclave};
 const ATTEST_TS_MS: u64 = 1747071568899; // inside the attestation's cert validity window
 const EXPECTED_PK: vector<u8> = x"e8e62201dbe293b703c759f653107acbc2c911fa1d2e66f2c747bec95971a2af";
 const EXPECTED_PCR0: vector<u8> = x"cbe1afb6ed0ff89f10295af0b802247ec5670da8f886e71a4226373b032c322f4e42c9c98288e7211682b258684505a2";
+const EXPECTED_PCR1: vector<u8> = x"cbe1afb6ed0ff89f10295af0b802247ec5670da8f886e71a4226373b032c322f4e42c9c98288e7211682b258684505a2";
+const EXPECTED_PCR2: vector<u8> = x"21b9efbc184807662e966d34f390821309eeac6802309798826296bf3e8bec7c10edb30948c90ba67310f7b964fc500a";
 
 // Canonical AWS-signed Nitro attestation document. Verbatim from the Sui framework test
 // vector (MystenLabs/sui crypto/nitro_attestation_test) — do not edit.
@@ -28,10 +30,15 @@ fun register_via_nitro_accepts_real_aws_attestation() {
     let mut clk = clock::create_for_testing(ts::ctx(&mut sc));
     clk.set_for_testing(ATTEST_TS_MS);
 
+    // Admin has pinned the canonical image's measurements (here, the sample's PCR0/1/2).
+    let cfg = enclave_registry::config_for_testing(
+        EXPECTED_PCR0, EXPECTED_PCR1, EXPECTED_PCR2, ts::ctx(&mut sc),
+    );
     // Native on-chain verification of the AWS Nitro attestation → parsed document.
     let doc = nitro_attestation::load_nitro_attestation(ATTESTATION, &clk);
-    // Production path: bind the attested pubkey + PCRs into a shared Enclave (mode = NITRO).
-    enclave_registry::register_via_nitro(doc, ts::ctx(&mut sc));
+    // Production path: attested PCRs match the pinned image → bind the attested pubkey into
+    // a shared Enclave (mode = NITRO). A mismatch aborts E_BAD_PCR (see the negative test).
+    enclave_registry::register_via_nitro(&cfg, doc, ts::ctx(&mut sc));
 
     ts::next_tx(&mut sc, @0xAD);
     {
@@ -42,6 +49,29 @@ fun register_via_nitro_accepts_real_aws_attestation() {
         assert!(enclave_registry::pcr0(&e) == EXPECTED_PCR0, 2); // measured-boot register 0
         ts::return_shared(e);
     };
+    enclave_registry::destroy_config_for_testing(cfg);
+    clk.destroy_for_testing();
+    ts::end(sc);
+}
+
+#[test]
+#[expected_failure(abort_code = enclave_registry::E_BAD_PCR)]
+/// Identity binding (the H1 fix): a genuine, validly-signed AWS attestation whose PCRs do
+/// NOT match the pinned canonical image is rejected — so an attacker can't register their
+/// OWN Nitro enclave (real cert chain, different code) and self-attest fabricated income.
+fun register_via_nitro_rejects_wrong_pcr() {
+    let mut sc = ts::begin(@0xAD);
+    let mut clk = clock::create_for_testing(ts::ctx(&mut sc));
+    clk.set_for_testing(ATTEST_TS_MS);
+
+    // Pin a DIFFERENT expected PCR0 than the attestation actually carries.
+    let cfg = enclave_registry::config_for_testing(
+        x"00", EXPECTED_PCR1, EXPECTED_PCR2, ts::ctx(&mut sc),
+    );
+    let doc = nitro_attestation::load_nitro_attestation(ATTESTATION, &clk);
+    enclave_registry::register_via_nitro(&cfg, doc, ts::ctx(&mut sc)); // → E_BAD_PCR
+
+    enclave_registry::destroy_config_for_testing(cfg);
     clk.destroy_for_testing();
     ts::end(sc);
 }

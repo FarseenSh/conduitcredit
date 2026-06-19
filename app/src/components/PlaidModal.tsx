@@ -11,7 +11,7 @@ const STATEMENTS = [
   { month: "Feb 2026", payroll: 2680, gig: 1380 },
   { month: "Mar 2026", payroll: 2680, gig: 1720 },
   { month: "Apr 2026", payroll: 2680, gig: 1450 },
-  { month: "May 2026", payroll: 2680, gig: 1620 },
+  { month: "May 2026", payroll: 2680, gig: 1470 },
 ];
 
 const AVG_MONTHLY = Math.round(

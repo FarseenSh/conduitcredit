@@ -132,15 +132,17 @@ export function parseMoveAbort(raw: string): string {
       "3": "E_BAD_SIGNATURE — signature failed Ed25519 verification",
     },
   };
-  // MoveAbort(... ::income ...) ... , 1) — pull module + code.
-  const modMatch = raw.match(/::(\w+)\b/g);
-  const codeMatch = raw.match(/,\s*(\d+)\s*\)/);
+  // Modern Sui abort shape:
+  //   MoveAbort(MoveLocation { module: ModuleId { address: …, name: Identifier("credit_line") },
+  //             function: 3, … }, 3) in command 0
+  // The module is in `Identifier("…")` (snake_case), the abort code is the integer right
+  // after the MoveLocation's closing brace.
+  const modMatch = raw.match(/Identifier\("([a-z_][a-z_0-9]*)"\)/);
+  const codeMatch = raw.match(/\}\s*,\s*(\d+)\s*\)/);
   if (modMatch && codeMatch) {
-    for (const m of modMatch.reverse()) {
-      const mod = m.replace("::", "");
-      const code = codeMatch[1];
-      if (codeMap[mod]?.[code]) return codeMap[mod][code];
-    }
+    const mod = modMatch[1];
+    const code = codeMatch[1];
+    if (codeMap[mod]?.[code]) return codeMap[mod][code];
   }
   // generic shortening
   return raw.length > 180 ? raw.slice(0, 180) + "…" : raw;

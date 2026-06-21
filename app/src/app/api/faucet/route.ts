@@ -6,7 +6,7 @@
 // amount, recipient)`. The deployer holds the TreasuryCap, so only it can mint. This key
 // is server-side ONLY and never reaches the browser.
 import { NextResponse } from "next/server";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { Transaction } from "@mysten/sui/transactions";
 import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
@@ -34,6 +34,13 @@ function deployerKeypair(): Ed25519Keypair {
   return Ed25519Keypair.fromSecretKey(Uint8Array.from(secret));
 }
 
+// The faucet can only mint where the deployer key is available: DEPLOYER_SECRET_B64 (any
+// host) or the local keystore (dev). On a public host that intentionally does NOT carry the
+// key, degrade to a clear message instead of an ENOENT crash.
+function faucetConfigured(): boolean {
+  return Boolean(process.env.DEPLOYER_SECRET_B64) || existsSync(KEYSTORE_PATH);
+}
+
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as { recipient?: string };
@@ -42,6 +49,16 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "invalid or missing recipient address" },
         { status: 400 }
+      );
+    }
+
+    if (!faucetConfigured()) {
+      return NextResponse.json(
+        {
+          error:
+            "Test-dUSDC faucet isn't enabled on this deployment (the deployer key is kept off the public host). Ask the team to mint to your address, or run the app locally.",
+        },
+        { status: 503 }
       );
     }
 

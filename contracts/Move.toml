@@ -6,8 +6,13 @@ license = "Apache-2.0"
 # System dependencies (Sui framework, MoveStdlib) are resolved implicitly from the
 # installed CLI's bundled framework — this keeps the published package's framework
 # linkage matched to the CLI and avoids a slow git clone of the full sui repo.
-# The nautilus `enclave` git dependency is added post-gate (real verify_signature path):
-#   Enclave = { git = "https://github.com/MystenLabs/nautilus.git", subdir = "move/enclave", rev = "<pinned>" }
+#
+# We deliberately do NOT vendor the MystenLabs/nautilus `enclave` Move package: the on-chain
+# code is self-contained on the native `sui::nitro_attestation` + `sui::ed25519` primitives.
+# `tests/gate_tests::bcs_matches_canonical_weather_vector` proves our `IntentMessage` BCS is
+# byte-identical to nautilus's OWN canonical reference vector (x"0020b1d1…"), so we match the
+# Nautilus wire format exactly — without a runtime dependency on an external package and
+# without coupling our published bytecode to nautilus's framework revision.
 
 [addresses]
 conduit_credit = "0x0"

@@ -52,6 +52,19 @@ pub struct SignedAttestation {
     pub public_key: [u8; 32],
 }
 
+/// Compute the attested 6-month average income from the per-month net deposits the enclave
+/// read (the last 6 monthly payroll/bank inflows from Plaid). This is the underwriting
+/// computation that happens INSIDE the TEE — the enclave signs the *result*, never the raw
+/// monthly statements. Base units (6-dp USDC), rounded half-up; empty input → 0.
+pub fn average_6mo_income(monthly_net_usdc: &[u64]) -> u64 {
+    if monthly_net_usdc.is_empty() {
+        return 0;
+    }
+    let sum: u128 = monthly_net_usdc.iter().map(|&m| m as u128).sum();
+    let n = monthly_net_usdc.len() as u128;
+    ((sum + n / 2) / n) as u64 // round half-up
+}
+
 /// Sign `IntentMessage<CreditPayload>{ intent: 2, timestamp_ms, payload }` with the enclave key.
 pub fn sign_credit_attestation(payload: CreditPayload, timestamp_ms: u64) -> SignedAttestation {
     let msg = IntentMessage { intent: INTENT_SCOPE_CREDIT, timestamp_ms, payload };
@@ -118,5 +131,17 @@ mod tests {
             hex::encode(signed.signature),
             "c91dae2e44265c3e4ebe915960dc6e2a62456abfc5d49711ef4a922b0da97e88f530d6a54a2b4591a8b06fa12711e4d12721dae94ee7bd248977ec0d9c82b703"
         );
+    }
+
+    /// The enclave's own income computation (the work done inside the TEE before signing).
+    #[test]
+    fn averages_six_months_of_income() {
+        let months = [
+            4_000_000000u64, 4_500_000000, 3_800_000000,
+            4_200_000000, 4_600_000000, 4_100_000000,
+        ];
+        assert_eq!(average_6mo_income(&months), 4_200_000000); // mean is exact → matches the fixture
+        assert_eq!(average_6mo_income(&[1, 2]), 2);            // 1.5 rounds half-up
+        assert_eq!(average_6mo_income(&[]), 0);                // no data → 0
     }
 }

@@ -80,12 +80,22 @@ export async function fetchSandboxMonthlyIncome(): Promise<PlaidIncome> {
   });
   const at = ex.access_token;
 
-  // Poll /transactions/sync until the async historical update lands (or the budget elapses).
+  // Poll /transactions/sync until the async historical update lands. The custom-user
+  // transactions arrive a few seconds AFTER the item is created, so we must NOT bail just
+  // because the first polls are empty — only stop early once income has actually arrived
+  // and no new transactions are coming in. Budget is generous (the historical update has
+  // taken ~12s in practice); the modal hides this wait behind the login step.
+  const INCOME_BUDGET_MS = 22_000;
   const seen = new Map<string, PlaidTxn>();
   let cursor: string | null = null;
   let stable = 0;
   const t0 = Date.now();
-  while (Date.now() - t0 < 10_000 && stable < 2) {
+  const incomeCount = () => {
+    let n = 0;
+    for (const t of seen.values()) if (t.amount < 0 && isIncome(t.name ?? t.merchant_name ?? "")) n++;
+    return n;
+  };
+  while (Date.now() - t0 < INCOME_BUDGET_MS) {
     let hasMore = true;
     let gotNew = false;
     while (hasMore) {
@@ -102,8 +112,12 @@ export async function fetchSandboxMonthlyIncome(): Promise<PlaidIncome> {
       cursor = s.next_cursor;
       hasMore = s.has_more;
     }
-    stable = gotNew ? 0 : stable + 1;
-    if (stable < 2) await wait(1200);
+    // Only allow an early stop once we actually have income and it has settled.
+    if (incomeCount() > 0) {
+      stable = gotNew ? 0 : stable + 1;
+      if (stable >= 2) break;
+    }
+    if (Date.now() - t0 < INCOME_BUDGET_MS) await wait(1000);
   }
 
   // Group income credits (amount < 0) by YYYY-MM, sum each month, average the monthly totals.

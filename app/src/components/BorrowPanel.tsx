@@ -153,12 +153,17 @@ function FundStep({ balance }: { balance?: bigint }) {
   const [loading, setLoading] = useState(false);
   const [digest, setDigest] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The public host intentionally carries no deployer key, so /api/faucet returns 503.
+  // That is a deliberate security posture (keys stay off the web server), not a failure —
+  // surface it calmly rather than as a red error.
+  const [unavailable, setUnavailable] = useState(false);
   const hasFunds = (balance ?? 0n) > 0n;
 
   async function getFunds() {
     if (!account) return;
     setError(null);
     setDigest(null);
+    setUnavailable(false);
     setLoading(true);
     try {
       const res = await fetch("/api/faucet", {
@@ -166,6 +171,10 @@ function FundStep({ balance }: { balance?: bigint }) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ recipient: account.address }),
       });
+      if (res.status === 503) {
+        setUnavailable(true);
+        return;
+      }
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "faucet failed");
       setDigest(json.digest as string);
@@ -186,25 +195,40 @@ function FundStep({ balance }: { balance?: bigint }) {
             {balance === undefined ? "—" : fmtUsd(balance)}
           </div>
         </div>
-        <button onClick={getFunds} disabled={loading} className="btn-primary">
-          {loading ? (
-            <>
-              <Spinner />
-              minting…
-            </>
-          ) : (
-            <>
-              <Icon name="wallet" className="h-4 w-4" />
-              Get test dUSDC
-            </>
-          )}
-        </button>
+        {/* Once funded, the step is done — show no CTA that could mislead or error. */}
+        {!hasFunds && (
+          <button onClick={getFunds} disabled={loading} className="btn-primary">
+            {loading ? (
+              <>
+                <Spinner />
+                minting…
+              </>
+            ) : (
+              <>
+                <Icon name="wallet" className="h-4 w-4" />
+                Get test dUSDC
+              </>
+            )}
+          </button>
+        )}
       </div>
       {digest && (
         <div className="mt-3 flex items-center gap-2 rounded-lg border border-lime/30 bg-lime/[0.06] px-3 py-2 text-[11px]">
           <Icon name="check" className="h-3.5 w-3.5 text-lime" />
           <span className="label">minted 20,000 dUSDC · tx</span>
           <ObjLink id={digest} kind="tx" />
+        </div>
+      )}
+      {unavailable && (
+        <div className="mt-3 flex items-start gap-2 rounded-lg border border-teal/30 bg-teal/[0.05] px-3 py-2 font-mono text-[11px] leading-relaxed">
+          <Icon name="shield" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-teal" />
+          <span className="text-chalk-dim">
+            By design, the deployer key never touches this public host — signing
+            keys belong in the enclave, not a web server — so minting runs only
+            when the app runs locally.{" "}
+            <span className="text-chalk">The demo wallet is pre-funded</span>{" "}
+            with test dUSDC.
+          </span>
         </div>
       )}
       {error && (

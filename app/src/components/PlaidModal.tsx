@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Icon } from "./ui";
 import { fmtUsd } from "@/lib/format";
 
-// Six months of deposits a payroll/bank data API would read. Averages to $4,200/mo.
+// Representative six months of deposits, used as the preview and as the fallback when
+// Plaid keys aren't configured. When they ARE configured, /api/plaid-income replaces
+// this with a real Plaid Sandbox read. Averages to $4,200/mo.
 const STATEMENTS = [
   { month: "Dec 2025", payroll: 2680, gig: 1490 },
   { month: "Jan 2026", payroll: 2680, gig: 1610 },
@@ -18,6 +20,29 @@ const AVG_MONTHLY = Math.round(
   STATEMENTS.reduce((a, s) => a + s.payroll + s.gig, 0) / STATEMENTS.length
 );
 
+type Income = {
+  months: { month: string; amount: number }[];
+  avg: number;
+  src: "plaid" | "fallback";
+};
+
+const FALLBACK_INCOME: Income = {
+  months: STATEMENTS.map((s) => ({ month: s.month, amount: s.payroll + s.gig })),
+  avg: AVG_MONTHLY,
+  src: "fallback",
+};
+
+// "2026-06" → "Jun 2026"; passthrough for already-friendly labels.
+function fmtMonth(m: string): string {
+  const match = /^(\d{4})-(\d{2})$/.exec(m);
+  if (!match) return m;
+  return new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, 1)).toLocaleString("en-US", {
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 export function PlaidModal({
   open,
   onClose,
@@ -28,6 +53,31 @@ export function PlaidModal({
   onLinked: (avgMonthlyUsdc: number) => void;
 }) {
   const [stage, setStage] = useState<"login" | "consent" | "reading">("login");
+  const [income, setIncome] = useState<Income | null>(null);
+
+  // Prefetch the income read when the modal opens, so the multi-second Plaid Sandbox sync
+  // is hidden behind the login step. Falls back to representative data if Plaid isn't
+  // configured or the read fails — the demo never dead-ends.
+  useEffect(() => {
+    if (!open || income) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch("/api/plaid-income", { method: "POST" });
+        const j = await r.json();
+        if (!cancelled && j.configured && Array.isArray(j.months) && j.months.length) {
+          setIncome({ months: j.months, avg: j.avgMonthlyUsdc, src: "plaid" });
+          return;
+        }
+      } catch {
+        /* fall through to representative income */
+      }
+      if (!cancelled) setIncome(FALLBACK_INCOME);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, income]);
 
   if (!open) return null;
 
@@ -117,37 +167,55 @@ export function PlaidModal({
                   desc="6-month income history"
                 />
               </div>
-              <div className="space-y-1.5">
-                {STATEMENTS.map((s) => (
-                  <div
-                    key={s.month}
-                    className="flex items-center justify-between rounded-md bg-ink-900/40 px-3 py-1.5"
-                  >
-                    <span className="font-mono text-[11px] text-chalk-dim">
-                      {s.month}
+              {!income ? (
+                <div className="flex items-center justify-center gap-2 py-7 font-mono text-[11px] text-chalk-dim">
+                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-lime/30 border-t-lime" />
+                  securely reading your accounts…
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-1.5">
+                    {income.months.map((s) => (
+                      <div
+                        key={s.month}
+                        className="flex items-center justify-between rounded-md bg-ink-900/40 px-3 py-1.5"
+                      >
+                        <span className="font-mono text-[11px] text-chalk-dim">
+                          {fmtMonth(s.month)}
+                        </span>
+                        <span className="data text-[12px] text-chalk">
+                          {fmtUsd(s.amount * 1e6, { decimals: 0 })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg border border-lime/30 bg-lime/[0.06] px-3.5 py-2.5">
+                    <span className="label flex items-center gap-1.5 text-lime/80">
+                      avg monthly income
+                      {income.src === "plaid" && (
+                        <span className="inline-flex items-center gap-1 rounded bg-lime/15 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-lime">
+                          <span className="h-1 w-1 rounded-full bg-lime" /> live Plaid
+                        </span>
+                      )}
                     </span>
-                    <span className="data text-[12px] text-chalk">
-                      {fmtUsd((s.payroll + s.gig) * 1e6, { decimals: 0 })}
+                    <span className="data text-lg font-bold text-lime">
+                      {fmtUsd(income.avg * 1e6, { decimals: 0 })}/mo
                     </span>
                   </div>
-                ))}
-              </div>
-              <div className="flex items-center justify-between rounded-lg border border-lime/30 bg-lime/[0.06] px-3.5 py-2.5">
-                <span className="label text-lime/80">6-mo average</span>
-                <span className="data text-lg font-bold text-lime">
-                  {fmtUsd(AVG_MONTHLY * 1e6, { decimals: 0 })}/mo
-                </span>
-              </div>
+                </>
+              )}
               <button
+                disabled={!income}
                 onClick={() => {
+                  const avg = income?.avg ?? AVG_MONTHLY;
                   setStage("reading");
                   setTimeout(() => {
-                    onLinked(AVG_MONTHLY);
+                    onLinked(avg);
                     onClose();
                     reset();
                   }, 1400);
                 }}
-                className="btn-primary w-full"
+                className="btn-primary w-full disabled:opacity-50"
               >
                 Allow &amp; continue
               </button>

@@ -25,7 +25,11 @@ export function HowItWorks() {
               <span className="text-chalk">inside the TEE</span> — they never
               leave it, never touch the chain, never touch our servers. The
               requestable endpoints are frozen into the enclave&apos;s PCR
-              measurements at build time.
+              measurements at build time.{" "}
+              <span className="text-chalk-faint">
+                (Plaid Sandbox in the demo; production keys, already whitelisted,
+                on mainnet.)
+              </span>
             </>
           }
           foot={
@@ -46,15 +50,18 @@ export function HowItWorks() {
               Intent scope <span className="text-lime">= 2</span>, BCS-encoded.
               On-chain, <Code accent="lime">enclave::verify_signature</Code>{" "}
               checks it against a{" "}
-              <span className="text-chalk">registered Enclave</span> object —
-              whose key is bound to the Nitro attestation via{" "}
-              <Code accent="lime">sui::nitro_attestation</Code>, with the AWS
-              root CA shipping in the framework.
+              <span className="text-chalk">registered Enclave</span> object. The
+              native <Code accent="lime">sui::nitro_attestation</Code> path
+              (AWS root CA in the framework) binds that key to a real Nitro
+              attestation — proven in our suite against a genuine AWS attestation.
+              The live demo verifies against the operator-registered key (the
+              documented fallback); <span className="text-chalk">identical
+              downstream</span>.
             </>
           }
           foot={
             <div className="flex items-center gap-2 text-[10.5px]">
-              <span className="label">registered enclave</span>
+              <span className="label">registered enclave · operator (testnet)</span>
               <ObjLink id={CONFIG.enclave} />
             </div>
           }

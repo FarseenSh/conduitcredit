@@ -38,7 +38,7 @@ The full underwriting loop runs on Sui testnet today. `scripts/demo.mjs` execute
 | close_credit_line | line repaid in full → one-line slot freed | `Ginc2K8spYw4HcaLDQZQraWAv1faen2D6w3BqUMCi23q` |
 | **forged attestation** | tampered signature → **chain ABORTS** (`income::attest_income` `E_BAD_SIGNATURE`) | `FNoV6aosjkurRnC4oxsq74hzL1zQpSuHaaFafHsx8cUw` |
 
-The TEE-verified-income loop is **live, not mocked.**
+Every `verify_signature` runs **live on testnet — not mocked**: the chain itself accepts the good signature and **aborts the forged one** (`E_BAD_SIGNATURE`, digest above). On testnet the enclave key is bound through the **operator fallback** (`register_via_operator`) — the documented resilience path. The native **AWS-Nitro** registration (`register_via_nitro`) is fully implemented and proven against a *real* AWS attestation in `contracts/tests/nitro_tests.move`, and is the one-switch mainnet step (see [Mainnet path](#mainnet-path-the-5050-prize-is-credible)). Same `verify_signature` either way — only the key's *origin* changes.
 
 ---
 

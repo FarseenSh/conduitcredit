@@ -97,7 +97,8 @@ Day-1 gate canary (the standalone `verify_signature` proof) also remains publish
 ```
 contracts/   Move package `conduit_credit` (7 modules) + tests (14 passing)
   sources/   enclave_registry · income · credit_pool · credit_line · defaults · mock_usdc · registry
-  tests/     gate_tests (BCS/ed25519 canary) · protocol_tests (full lifecycle)
+  tests/     gate_tests (BCS/ed25519 canary) · protocol_tests (full lifecycle) ·
+             nitro_tests (real AWS attestation) · pool_invariant_tests (solvency)
 enclave/     Rust nautilus-server (production Nitro signer) + paired BCS serde test
 scripts/     attester.mjs (enclave signer) · demo.mjs (e2e runner) · setup.mjs · sign.mjs · gate_call.mjs
 app/         Next.js dApp (@mysten/dapp-kit) — borrower + lender flows
@@ -108,7 +109,7 @@ config/      deployment.testnet.json — single source of truth for all IDs
 
 ```bash
 # Move contracts
-sui move test  --path contracts            # 14/14 pass (gate + lifecycle + real Nitro attestation)
+sui move test  --path contracts            # 15/15 pass (gate + lifecycle + real Nitro attestation + pool-solvency invariant)
 sui move build --path contracts
 
 # End-to-end loop on testnet (uses config/deployment.testnet.json)

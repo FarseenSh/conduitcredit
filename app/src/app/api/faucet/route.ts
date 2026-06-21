@@ -22,10 +22,16 @@ const KEYSTORE_PATH =
   process.env.SUI_KEYSTORE_PATH ?? "/Users/farseen/conduitcredit/.sui/sui.keystore";
 
 function deployerKeypair(): Ed25519Keypair {
-  const ks = JSON.parse(readFileSync(KEYSTORE_PATH, "utf8")) as string[];
-  // entry 0: base64([flag | 32-byte secret]); drop flag byte → 32-byte Ed25519 secret.
-  const decoded = Buffer.from(ks[0], "base64");
-  return Ed25519Keypair.fromSecretKey(Uint8Array.from(decoded.subarray(1)));
+  // Prefer an explicit base64 secret in env so the faucet works on ANY deploy host
+  // (e.g. Vercel, where the local sui keystore file does not exist); fall back to the
+  // keystore file for local `pnpm dev`. Both encode base64([flag(1B) | 32-byte secret]).
+  const fromEnv = process.env.DEPLOYER_SECRET_B64;
+  const entry =
+    fromEnv ?? (JSON.parse(readFileSync(KEYSTORE_PATH, "utf8")) as string[])[0];
+  const decoded = Buffer.from(entry, "base64");
+  // 33 bytes = scheme flag + secret; 32 bytes = bare secret.
+  const secret = decoded.length === 33 ? decoded.subarray(1) : decoded;
+  return Ed25519Keypair.fromSecretKey(Uint8Array.from(secret));
 }
 
 export async function POST(req: Request) {

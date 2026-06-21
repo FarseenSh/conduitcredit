@@ -1,7 +1,6 @@
 "use client";
 
 import { ConnectButton, useCurrentAccount } from "@mysten/dapp-kit";
-import { Icon } from "./ui";
 import { shorten } from "@/lib/format";
 import { CONFIG, suiscanAccount } from "@/lib/config";
 
@@ -18,8 +17,19 @@ export function Header() {
     <header className="sticky top-0 z-50 border-b border-line bg-ink-950/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 lg:px-8">
         <a href="#top" className="group flex items-center gap-2.5">
-          <span className="relative flex h-8 w-8 items-center justify-center rounded-md bg-grad-lime">
-            <Icon name="shield" className="h-4 w-4 text-ink-950" />
+          <span className="relative flex h-8 w-8 items-center justify-center">
+            <svg viewBox="0 0 512 512" className="h-8 w-8" fill="none" aria-hidden="true">
+              <defs>
+                <linearGradient id="hdr-g" x1="120" y1="150" x2="392" y2="372" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#BEF264" />
+                  <stop offset="1" stopColor="#2DD4BF" />
+                </linearGradient>
+              </defs>
+              <rect width="512" height="512" rx="120" fill="#0B0F0E" />
+              <path d="M350 190 A122 122 0 1 0 350 322" stroke="url(#hdr-g)" strokeWidth="56" strokeLinecap="round" fill="none" />
+              <circle cx="356" cy="256" r="42" fill="#0B0F0E" />
+              <circle cx="356" cy="256" r="23" fill="#BEF264" />
+            </svg>
           </span>
           <span className="flex flex-col leading-none">
             <span className="font-display text-[15px] font-bold tracking-tightest text-chalk">

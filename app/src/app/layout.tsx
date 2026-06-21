@@ -17,10 +17,31 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+const DESCRIPTION =
+  "On-chain USDC credit lines underwritten by income verified inside an AWS Nitro enclave. The chain natively verifies the attestation — no oracle, no leaked bank statements.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
   title: "ConduitCredit — income, not collateral",
-  description:
-    "On-chain USDC credit lines underwritten by income verified inside an AWS Nitro enclave. The chain natively verifies the attestation — no oracle, no leaked bank statements.",
+  description: DESCRIPTION,
+  keywords: [
+    "Sui", "DeFi", "Nautilus", "AWS Nitro", "TEE", "under-collateralized lending",
+    "income verification", "USDC credit line", "Sui Overflow 2026",
+  ],
+  applicationName: "ConduitCredit",
+  openGraph: {
+    type: "website",
+    title: "ConduitCredit — income, not collateral",
+    description: DESCRIPTION,
+    siteName: "ConduitCredit",
+    images: [{ url: "/logo.svg", width: 512, height: 512, alt: "ConduitCredit" }],
+  },
+  twitter: {
+    card: "summary",
+    title: "ConduitCredit — income, not collateral",
+    description: DESCRIPTION,
+    images: ["/logo.svg"],
+  },
 };
 
 export default function RootLayout({
